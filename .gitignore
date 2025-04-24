@@ -1,0 +1,15 @@
+.DS_Store
+slurm-*.out
+__marimo__/
+wandb/
+data/
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
