@@ -8,8 +8,8 @@ dependencies = [
     "plotly>=6.0.1",
     "torch>=2.7.0",
     "tqdm>=4.67.1",
-    "wandb>=0.19.10",
 ]
 [tool.ruff]
 indent-width = 2
 format.quote-style = "single"
+ignore = ["E731"]

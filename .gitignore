@@ -13,3 +13,5 @@ wheels/
 
 # Virtual environments
 .venv
+
+Score-Entropy-Discrete-Diffusion/
