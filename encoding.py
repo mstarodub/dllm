@@ -24,7 +24,6 @@ class PositionalEncoding(nn.Module):
 class TimestepEncoding(nn.Module):
   def __init__(self, hidden_size, frequency_embedding_size=256):
     super().__init__()
-    # hidden_size ==  main models embed_dim
     self.mlp = nn.Sequential(
       nn.Linear(frequency_embedding_size, hidden_size),
       nn.SiLU(),

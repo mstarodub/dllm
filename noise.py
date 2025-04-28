@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 
 
-# TODO: perhaps hf diffusers has a schedule that we can use
 class LogLinearNoise(nn.Module):
+  # TODO: explain this, cleanup
   """
   Log Linear noise schedule built so that 1 - 1/e^(n(t)) interpolates between 0 and ~1
   when t goes from 0 to 1. Used for absorbing
@@ -24,4 +24,4 @@ class LogLinearNoise(nn.Module):
     return -torch.log1p(-(1 - self.eps) * t)
 
   def forward(self, t):
-    return (self.noise_total(t), self.noise_rate(t))
+    return (self.noise_total(t).unsqueeze(1), self.noise_rate(t).unsqueeze(1))

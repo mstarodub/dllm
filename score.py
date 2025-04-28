@@ -4,8 +4,6 @@ import torch.nn.functional as F
 import string
 from typing import List
 
-import util
-import noise
 import encoding
 
 
@@ -14,7 +12,6 @@ class CharTokenizer:
     self.chars = list(string.ascii_lowercase) + [' ', '.', ',', '!', '?']
 
     self.pad_token = '[PAD]'
-    # PAD is index 0
     self.vocab = [self.pad_token] + self.chars
     self.char_to_idx = {ch: i for i, ch in enumerate(self.vocab)}
     self.idx_to_char = {i: ch for i, ch in enumerate(self.vocab)}
@@ -93,64 +90,3 @@ class ScoreNet(nn.Module):
     transformer_out = self.transformer(src=x, src_key_padding_mask=src_padding_mask)
     logits = self.output_layer(transformer_out)
     return F.softplus(logits)
-
-
-if __name__ == '__main__':
-  tokenizer = CharTokenizer()
-  pad_idx = tokenizer.pad_idx
-  absorbing_idx = tokenizer.vocab_size
-  max_seq_len = 20
-  device = util.device()
-
-  model = ScoreNet(
-    # masking/absorbing token
-    vocab_size=tokenizer.vocab_size + 1,
-    embed_dim=16,
-    time_embed_dim=64,
-    num_heads=2,
-    num_layers=1,
-    max_seq_len=max_seq_len,
-    pad_idx=pad_idx,
-    dropout=0.0,
-  ).to(device)
-  model.eval()
-
-  noise_schedule = noise.LogLinearNoise()
-
-  texts = [
-    'hello world',
-    'hi!',
-  ]
-  encoded_batch = [tokenizer.encode(text) for text in texts]
-
-  def pad(rep):
-    return rep + [pad_idx] * (max_seq_len - len(rep))
-
-  padded_batch = torch.tensor(
-    [pad(rep) for rep in encoded_batch],
-    dtype=torch.long,
-    device=device,
-  )
-
-  t_batch = torch.rand(padded_batch.shape[0], device=device)
-  total_noise_batch, rate_noise_batch = noise_schedule(t_batch)
-  print('noise rate', rate_noise_batch)
-  print('noise total', total_noise_batch)
-
-  with torch.no_grad():
-    output_logits = model(padded_batch, total_noise_batch)
-
-  print(f'output logits shape: {output_logits.shape}')
-
-  predicted_0 = torch.argmax(output_logits[0], dim=-1).tolist()
-  decoded_text_0 = tokenizer.decode(predicted_0)
-  print(f'decoded output: "{decoded_text_0}"')
-
-  from loss import loss_dwdse
-  from graph import AbsorbingGraph
-
-  graph = AbsorbingGraph(tokenizer.vocab_size)
-
-  # def loss_dwdse(scorenet, graph, noise, batch, t):
-  l = loss_dwdse(model, graph, noise_schedule, padded_batch, torch.tensor([0.4, 0.7]))
-  print(l)

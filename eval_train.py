@@ -3,22 +3,24 @@ import torch
 from tqdm import tqdm
 
 import util
+from loss import loss_dwdse
 
 
 @torch.no_grad()
 def eval(model, data, log_extra=dict()):
-  model.eval()
+  model.scorenet.eval()
   device = util.device()
   for batch in tqdm(data):
     batch = batch.to(device)
-    loss = ...
+    # TODO: ???
+    t = ...
+    loss = loss_dwdse(model, batch, t)
     util.log({'test/loss': loss.item(), **log_extra})
 
 
 class Trainer:
   def __init__(self, model, config, checkpoint_dir='checkpoints'):
-    self.model = model
-    self.opt = torch.optim.AdamW(self.model.parameters(), lr=config.lr)
+    self.opt = torch.optim.AdamW(self.model.scorenet.parameters(), lr=config.lr)
     self.checkpoint_dir = checkpoint_dir
     self.num_epochs = config.epochs
     self.batch_size = config.batch_size
@@ -27,7 +29,7 @@ class Trainer:
     self.log_freq = config.log_freq
 
   def train(self, data_train, data_test):
-    self.model.train()
+    self.model.scorenet.train()
     device = util.device()
     for epoch in range(self.num_epochs):
       for b, batch in enumerate(data_train):
@@ -40,7 +42,7 @@ class Trainer:
         every_n = lambda ref: b % ref == 0 and batch.shape[0] == self.batch_size
         if every_n(self.checkpoint_freq):
           torch.save(
-            self.model.state_dict(),
+            self.model.scorenet.state_dict(),
             os.path.join(self.checkpoint_dir, f'checkpoint_ep{epoch}_step{b}.pt'),
           )
         step_stats = {
@@ -48,6 +50,6 @@ class Trainer:
           'batch': epoch * len(data_train) + b,
         }
         if every_n(self.eval_freq):
-          eval(self.model, data_test, step_stats)
+          eval(self.model.scorenet, data_test, step_stats)
         if every_n(self.log_freq):
           util.log({'train/loss': loss.item(), **step_stats})
