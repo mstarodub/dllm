@@ -11,6 +11,10 @@ class CharTokenizer:
   def __init__(self):
     self.chars = list(string.ascii_lowercase) + [' ', '.', ',', '!', '?']
 
+    # this is not nice from a theory standpoint. we could fill every input
+    # with spaces instead of PADs, and that way it would be recognized by
+    # the markov process as changeable states. via choosing a good dataset
+    # we can still have variable answer sizes (the model may learn to insert spaces)
     self.pad_token = '[PAD]'
     self.vocab = [self.pad_token] + self.chars
     self.char_to_idx = {ch: i for i, ch in enumerate(self.vocab)}

@@ -12,7 +12,7 @@ def eval(model, data, log_extra=dict()):
   device = util.device()
   for batch in tqdm(data):
     batch = batch.to(device)
-    # TODO: ???
+    # TODO: sample it
     t = ...
     loss = loss_dwdse(model, batch, t)
     util.log({'test/loss': loss.item(), **log_extra})
@@ -34,7 +34,9 @@ class Trainer:
     for epoch in range(self.num_epochs):
       for b, batch in enumerate(data_train):
         batch = batch.to(device)
-        loss = ...
+        # TODO: sample it
+        t = ...
+        loss = loss_dwdse(self.model, batch, t)
         loss.backward()
         self.opt.step()
         self.opt.zero_grad()
