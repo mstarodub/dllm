@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import string
 from typing import List
 
@@ -91,7 +92,7 @@ class ScoreNet(nn.Module):
     x = self.dropout_layer(token_embedded + pos_encoding + time_encoding)
     transformer_out = self.transformer(src=x, src_key_padding_mask=src_padding_mask)
     logits = self.output_layer(transformer_out)
-    return logits
+    return F.softplus(logits)
 
 
 if __name__ == '__main__':
@@ -144,3 +145,12 @@ if __name__ == '__main__':
   predicted_0 = torch.argmax(output_logits[0], dim=-1).tolist()
   decoded_text_0 = tokenizer.decode(predicted_0)
   print(f'decoded output: "{decoded_text_0}"')
+
+  from loss import loss_dwdse
+  from graph import AbsorbingGraph
+
+  graph = AbsorbingGraph(tokenizer.vocab_size)
+
+  # def loss_dwdse(scorenet, graph, noise, batch, t):
+  l = loss_dwdse(model, graph, noise_schedule, padded_batch, torch.tensor([0.4, 0.7]))
+  print(l)
