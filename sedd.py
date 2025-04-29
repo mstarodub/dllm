@@ -11,6 +11,7 @@ if __name__ == '__main__':
   import util
   import score
   import noise
+  import eval_train
   from loss import loss_dwdse
   from graph import AbsorbingGraph
 
@@ -69,3 +70,21 @@ if __name__ == '__main__':
   # def loss_dwdse(scorenet, graph, noise, batch, t):
   model = Sedd(scorenet, graph, noise_schedule)
   print(loss_dwdse(model, padded_batch, torch.tensor([0.4, 0.7])))
+
+  cf = util.Config(
+    dict(
+      epochs=5,
+      batch_size=2,
+      snapshot_freq=None,
+      eval_freq=1,
+      log_freq=1,
+      lr=1e-3,
+    )
+  )
+  tr = eval_train.Trainer(model, cf)
+
+  from torch.utils.data import DataLoader, TensorDataset
+
+  dataset = TensorDataset(padded_batch)
+  loader = DataLoader(dataset, batch_size=cf.batch_size, shuffle=True)
+  tr.train(loader, loader)
