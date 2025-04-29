@@ -88,3 +88,7 @@ if __name__ == '__main__':
   dataset = TensorDataset(padded_batch)
   loader = DataLoader(dataset, batch_size=cf.batch_size, shuffle=True)
   tr.train(loader, loader)
+
+  import reverse
+
+  reverse.sample(model, steps=4, nbatches=1)

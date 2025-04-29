@@ -33,7 +33,8 @@ class TimestepEncoding(nn.Module):
 
   def forward(self, t):
     # t: [B] or [B,1]
-    t = t.squeeze()
+    if t.dim() > 1 and t.size(-1) == 1:
+      t = t.squeeze(-1)
     emb = get_timestep_embedding(
       timesteps=t,
       embedding_dim=self.frequency_embedding_size,
