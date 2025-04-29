@@ -27,20 +27,20 @@ def sample(model, steps, nbatches=1):
   timesteps = torch.linspace(1.0, 0.0, steps + 1, device=device)
   sigma_total = model.noise.noise_total(timesteps)
   for idx in range(steps):
+    # time flows from 1 to 0 in the reverse process
     sigma_cur, sigma_next = sigma_total[idx], sigma_total[idx + 1]
     sigma_batch = sigma_cur.expand(nbatches, 1)
 
-    # TODO: maybe we dont need 2 calls
-    expm_fwd = expm_absorbing(sigma_cur - sigma_next, vocab_absorbing_size)
-    expm_rev = expm_absorbing(sigma_next - sigma_cur, vocab_absorbing_size)
+    expm_fwd = expm_absorbing(sigma_next - sigma_cur, vocab_absorbing_size)
+    expm_rev = expm_absorbing(sigma_cur - sigma_next, vocab_absorbing_size)
 
     scores = model.scorenet(xt, sigma_batch)
 
     probs = torch.einsum('ij,blj->bli', expm_fwd, scores) * expm_rev[xt]
     # we can sample from unnormalized; [B*L, V]
     probs_flat = probs.reshape(-1, vocab_absorbing_size)
-    print('XXX', expm_rev)
-    sampled = torch.multinomial(probs_flat, num_samples=1)
+    # TODO: this still has large negative values
+    sampled = torch.multinomial(probs_flat.clamp(min=0.0), num_samples=1)
     xt = sampled.reshape(nbatches, model.scorenet.max_seq_len)
 
   return xt
