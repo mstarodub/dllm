@@ -12,10 +12,12 @@ if __name__ == '__main__':
   import score
   import noise
   import eval_train
+  import dataset
+  import tokenizer
   from loss import loss_dwdse
   from graph import AbsorbingGraph
 
-  tokenizer = score.CharTokenizer()
+  tokenizer = tokenizer.CharTokenizer(dataset.ascii_alphabet())
   pad_idx = tokenizer.pad_idx
   absorbing_idx = tokenizer.vocab_size
   max_seq_len = 20
@@ -78,6 +80,8 @@ if __name__ == '__main__':
       snapshot_freq=None,
       eval_freq=1,
       log_freq=1,
+      sample_freq=1,
+      sample_steps=128,
       lr=1e-3,
     )
   )
@@ -85,10 +89,10 @@ if __name__ == '__main__':
 
   from torch.utils.data import DataLoader, TensorDataset
 
-  dataset = TensorDataset(padded_batch)
-  loader = DataLoader(dataset, batch_size=cf.batch_size, shuffle=True)
+  ds = TensorDataset(padded_batch)
+  loader = DataLoader(ds, batch_size=cf.batch_size, shuffle=True)
   tr.train(loader, loader)
 
   import reverse
 
-  reverse.sample(model, steps=4, nbatches=1)
+  reverse.sample_log(model, steps=4)

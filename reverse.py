@@ -16,15 +16,18 @@ def expm_absorbing(a, v):
   return expm
 
 
-def sample(model, steps, nbatches=1):
+# \tau-leaping tweedie denoising
+@torch.no_grad()
+def sample(model, steps, nbatches):
   device = util.device()
+  model.scorenet.eval()
   vocab_absorbing_size = model.scorenet.output_layer.out_features
   xt = torch.full(
     (nbatches, model.scorenet.max_seq_len),
     model.graph.absorbing_state,
     device=device,
   )
-  timesteps = torch.linspace(1.0, 0.0, steps + 1, device=device)
+  timesteps = torch.linspace(1.0, model.noise.t_eps(), steps + 1, device=device)
   sigma_total = model.noise.noise_total(timesteps)
   for idx in range(steps):
     # time flows from 1 to 0 in the reverse process
@@ -44,3 +47,8 @@ def sample(model, steps, nbatches=1):
     xt = sampled.reshape(nbatches, model.scorenet.max_seq_len)
 
   return xt
+
+
+def sample_log(model, steps, log_extra=dict()):
+  x = sample(model, steps, nbatches=1)
+  util.log({'sample': x}, **log_extra)

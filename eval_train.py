@@ -4,11 +4,11 @@ from tqdm import tqdm
 
 import util
 from loss import loss_dwdse
+from reverse import sample_log
 
 
-def sample_t(batch_size):
+def sample_t(batch_size, eps):
   device = util.device()
-  eps = 1e-3
   # almost t ~ U([0,1]), but remove dangerous 0 and 1 edges
   return (1 - eps) * torch.rand(batch_size, device=device) + eps
 
@@ -19,7 +19,7 @@ def eval(model, data, log_extra=dict()):
   device = util.device()
   for (batch,) in tqdm(data):
     batch = batch.to(device)
-    t = sample_t(batch.shape[0])
+    t = sample_t(batch.shape[0], model.noise.t_eps())
     loss = loss_dwdse(model, batch, t)
     util.log({'test/loss': loss.item(), **log_extra})
 
@@ -34,6 +34,8 @@ class Trainer:
     self.checkpoint_freq = config.snapshot_freq
     self.eval_freq = config.eval_freq
     self.log_freq = config.log_freq
+    self.sample_freq = config.sample_freq
+    self.sample_steps = config.sample_steps
 
   def train(self, data_train, data_test):
     self.model.scorenet.train()
@@ -48,7 +50,7 @@ class Trainer:
         self.opt.zero_grad()
 
         every_n = lambda ref: ref and b % ref == 0 and batch.shape[0] == self.batch_size
-        if every_n(self.checkpoint_freq):
+        if every_n(self.checkpoint_freq) and b > 0:
           torch.save(
             self.model.scorenet.state_dict(),
             os.path.join(self.checkpoint_dir, f'checkpoint_ep{epoch}_step{b}.pt'),
@@ -61,3 +63,5 @@ class Trainer:
           eval(self.model, data_test, step_stats)
         if every_n(self.log_freq):
           util.log({'train/loss': loss.item(), **step_stats})
+        if every_n(self.sample_freq):
+          sample_log(self.model, self.sample_steps, step_stats)

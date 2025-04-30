@@ -25,3 +25,7 @@ class LogLinearNoise(nn.Module):
 
   def forward(self, t):
     return (self.noise_total(t).unsqueeze(1), self.noise_rate(t).unsqueeze(1))
+
+  @staticmethod
+  def t_eps():
+    return 1e-3
