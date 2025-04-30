@@ -11,6 +11,10 @@ def dl_workers():
   return 12 if torch.cuda.is_available() else 0
 
 
+def grad_debug():
+  torch.autograd.set_detect_anomaly(True)
+
+
 def log(log_dict):
   print(*log_dict.items(), sep='\n')
 

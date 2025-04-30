@@ -1,7 +1,7 @@
 import os
 import torch
 import numpy as np
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 import util
 import score
@@ -53,7 +53,14 @@ class Trainer:
     self.model = model
     self.data_train = data_train
     self.data_test = data_test
-    self.opt = torch.optim.AdamW(model.scorenet.parameters(), lr=config.lr)
+    self.lr = config.lr
+    self.grad_clip = config.grad_clip
+    self.warmup = config.warmup
+    self.opt = torch.optim.AdamW(model.scorenet.parameters(), lr=self.lr)
+    self.scheduler = torch.optim.lr_scheduler.LambdaLR(
+      self.opt,
+      lr_lambda=lambda step: min(step / self.warmup, 1.0) if self.warmup else 1.0,
+    )
     self.checkpoint_dir = checkpoint_dir
     self.num_epochs = config.epochs
     self.batch_size = config.batch_size
@@ -66,28 +73,34 @@ class Trainer:
   def train(self):
     self.model.scorenet.train()
     device = util.device()
-    for epoch in range(self.num_epochs):
+    for epoch in trange(self.num_epochs):
       for b, batch in enumerate(self.data_train):
+        step = epoch * len(self.data_train) + b
         batch = batch.to(device)
         t = sample_t(batch.shape[0], self.model.noise.eps)
         loss = loss_dwdse(self.model, batch, t)
         self.opt.zero_grad()
         loss.backward()
+        if self.grad_clip > 0:
+          torch.nn.utils.clip_grad_norm_(
+            self.model.scorenet.parameters(), max_norm=self.grad_clip
+          )
         self.opt.step()
+        self.scheduler.step()
 
-        every_n = lambda ref: ref and b % ref == 0 and batch.shape[0] == self.batch_size
+        every_n = lambda ref: ref and step % ref == 0
         if every_n(self.checkpoint_freq) and b > 0 and self.checkpoint_dir:
           self.model.save(
             os.path.join(self.checkpoint_dir, f'checkpoint_ep{epoch}_step{b}.pt')
           )
         step_stats = {
           'epoch': epoch,
-          'batch': epoch * len(self.data_train) + b,
+          'batch': step,
         }
         if every_n(self.eval_freq):
           self.eval(step_stats)
           self.model.scorenet.train()
-        if every_n(self.log_freq):
+        if every_n(self.log_freq) and batch.shape[0] == self.batch_size:
           util.log({'train/loss': loss.item(), **step_stats})
         if every_n(self.sample_freq):
           sample_log(self.model, self.sample_steps, step_stats)

@@ -52,4 +52,4 @@ class ScoreNet(nn.Module):
     x = self.dropout_layer(token_embedded + pos_encoding + time_encoding)
     transformer_out = self.transformer(src=x, src_key_padding_mask=src_padding_mask)
     logits = self.output_layer(transformer_out)
-    return F.softplus(logits)
+    return logits

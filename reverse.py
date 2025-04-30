@@ -37,13 +37,14 @@ def sample(model, steps, nbatches):
     expm_fwd = expm_absorbing(sigma_next - sigma_cur, vocab_absorbing_size)
     expm_rev = expm_absorbing(sigma_cur - sigma_next, vocab_absorbing_size)
 
-    scores = model.scorenet(xt, sigma_batch)
+    # TODO: unsure (logprob)
+    scores = model.scorenet(xt, sigma_batch).exp()
 
     probs = torch.einsum('ij,blj->bli', expm_fwd, scores) * expm_rev[xt]
     # we can sample from unnormalized; [B*L, V]
     probs_flat = probs.reshape(-1, vocab_absorbing_size)
     # TODO: this still has large negative values
-    sampled = torch.multinomial(probs_flat.clamp(min=0.0), num_samples=1)
+    sampled = torch.multinomial(probs_flat.clamp(min=0.0) + 1e-10, num_samples=1)
     xt = sampled.reshape(nbatches, model.scorenet.max_seq_len)
 
   return xt
@@ -51,5 +52,4 @@ def sample(model, steps, nbatches):
 
 def sample_log(model, steps, log_extra=dict()):
   x = sample(model, steps, nbatches=1).squeeze(dim=0)
-  print('raw sample', x)
   util.log({'sample': model.tokenizer.decode(x), **log_extra})

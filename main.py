@@ -5,35 +5,42 @@ from sedd import Sedd, Trainer
 
 cf = util.Config(
   dict(
-    epochs=5,
-    batch_size=2,
+    epochs=50000,
+    batch_size=256,
     snapshot_freq=None,
     # TODO: need a proper test set for both
     eval_freq=None,
     log_freq=1000,
     sample_freq=1000,
-    sample_steps=128,
-    lr=1e-3,
-    dropout_p=0.0,
+    # 1024 for proteins, 128 for language
+    sample_steps=10,
+    lr=3e-4,
+    warmup=2500,
+    grad_clip=1.0,
+    dropout_p=0.1,
     max_seq_len=None,
-    embed_dim=16,
-    time_embed_dim=64,
+    # 768
+    embed_dim=8,
+    # 128
+    time_embed_dim=8,
+    # 8 for protein, 12 for langauge
     num_heads=2,
-    num_layers=1,
+    num_layers=2,
+    # 1024 for langauge, 128 for proteins (None would be saner)
+    block_size=None,
   )
 )
 
 
 def sentences_experiment():
-  cf.max_seq_len = 20
+  cf.max_seq_len = 11
   text_tokenizer = tokenizer.CharTokenizer(dataset.ascii_alphabet())
   model = Sedd(cf, text_tokenizer)
 
   texts = [
-    'hello world',
-    'hi!',
-    'diffusion models',
-    'generating text',
+    # 'abcdefghijk',
+    'aaaaaaaaaaa',
+    # 'a',
   ]
 
   loader = dataset.text_dataset(
@@ -41,6 +48,7 @@ def sentences_experiment():
     texts,
     batch_size=cf.batch_size,
     max_seq_len=cf.max_seq_len,
+    block_size=cf.block_size,
   )
   trainer = Trainer(model, cf, data_train=loader, data_test=loader)
   trainer.train()
@@ -58,6 +66,8 @@ def protein_experiment(add_markers=True):
     protein_tokenizer,
     batch_size=cf.batch_size,
     max_seq_len=cf.max_seq_len,
+    # TODO
+    block_size=None,
   )
   trainer = Trainer(
     model,

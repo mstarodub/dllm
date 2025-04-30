@@ -51,7 +51,7 @@ def acyp_dataset(
   tokenizer,
   batch_size,
   max_seq_len,
-  block_size=None,
+  block_size,
 ):
   device = util.device()
   seqs = get_acyp_sequences()
@@ -75,7 +75,7 @@ def text_dataset(
   strings,
   batch_size,
   max_seq_len,
-  block_size=None,
+  block_size,
 ):
   encoded = tokenizer.encode_all(strings)
   collate_fn = mk_collate(tokenizer.pad_idx, max_seq_len)
