@@ -1,3 +1,12 @@
+import os
+import torch
+from tqdm import tqdm
+
+import util
+from loss import loss_dwdse
+from reverse import sample_log
+
+
 class Sedd:
   def __init__(self, scorenet, graph, noise):
     self.scorenet = scorenet
@@ -5,94 +14,61 @@ class Sedd:
     self.noise = noise
 
 
-# just for testing
-if __name__ == '__main__':
-  import torch
-  import util
-  import score
-  import noise
-  import eval_train
-  import dataset
-  import tokenizer
-  from loss import loss_dwdse
-  from graph import AbsorbingGraph
-
-  tokenizer = tokenizer.CharTokenizer(dataset.ascii_alphabet())
-  pad_idx = tokenizer.pad_idx
-  absorbing_idx = tokenizer.vocab_size
-  max_seq_len = 20
+@torch.no_grad()
+def eval(model, data, log_extra=dict()):
+  model.scorenet.eval()
   device = util.device()
+  for (batch,) in tqdm(data):
+    batch = batch.to(device)
+    t = sample_t(batch.shape[0], model.noise.t_eps())
+    loss = loss_dwdse(model, batch, t)
+    util.log({'test/loss': loss.item(), **log_extra})
 
-  scorenet = score.ScoreNet(
-    # masking/absorbing token
-    vocab_size=tokenizer.vocab_size + 1,
-    embed_dim=16,
-    time_embed_dim=64,
-    num_heads=2,
-    num_layers=1,
-    max_seq_len=max_seq_len,
-    pad_idx=pad_idx,
-    dropout=0.0,
-  ).to(device)
-  scorenet.eval()
 
-  noise_schedule = noise.LogLinearNoise()
+class Trainer:
+  def __init__(self, model, config, checkpoint_dir='checkpoints'):
+    self.model = model
+    self.opt = torch.optim.AdamW(model.scorenet.parameters(), lr=config.lr)
+    self.checkpoint_dir = checkpoint_dir
+    self.num_epochs = config.epochs
+    self.batch_size = config.batch_size
+    self.checkpoint_freq = config.snapshot_freq
+    self.eval_freq = config.eval_freq
+    self.log_freq = config.log_freq
+    self.sample_freq = config.sample_freq
+    self.sample_steps = config.sample_steps
 
-  texts = [
-    'hello world',
-    'hi!',
-  ]
-  encoded_batch = [tokenizer.encode(text) for text in texts]
+  def train(self, data_train, data_test):
+    self.model.scorenet.train()
+    device = util.device()
+    for epoch in range(self.num_epochs):
+      for b, (batch,) in enumerate(data_train):
+        batch = batch.to(device)
+        t = sample_t(batch.shape[0])
+        loss = loss_dwdse(self.model, batch, t)
+        loss.backward()
+        self.opt.step()
+        self.opt.zero_grad()
 
-  def pad(rep):
-    return rep + [pad_idx] * (max_seq_len - len(rep))
+        every_n = lambda ref: ref and b % ref == 0 and batch.shape[0] == self.batch_size
+        if every_n(self.checkpoint_freq) and b > 0:
+          torch.save(
+            self.model.scorenet.state_dict(),
+            os.path.join(self.checkpoint_dir, f'checkpoint_ep{epoch}_step{b}.pt'),
+          )
+        step_stats = {
+          'epoch': epoch,
+          'batch': epoch * len(data_train) + b,
+        }
+        if every_n(self.eval_freq):
+          eval(self.model, data_test, step_stats)
+        if every_n(self.log_freq):
+          util.log({'train/loss': loss.item(), **step_stats})
+        if every_n(self.sample_freq):
+          sample_log(self.model, self.sample_steps, step_stats)
 
-  padded_batch = torch.tensor(
-    [pad(rep) for rep in encoded_batch],
-    dtype=torch.long,
-    device=device,
-  )
 
-  t_batch = torch.rand(padded_batch.shape[0], device=device)
-  total_noise_batch, rate_noise_batch = noise_schedule(t_batch)
-  print('noise rate', rate_noise_batch)
-  print('noise total', total_noise_batch)
-
-  with torch.no_grad():
-    output_logits = scorenet(padded_batch, total_noise_batch)
-
-  print(f'output logits shape: {output_logits.shape}')
-
-  predicted_0 = torch.argmax(output_logits[0], dim=-1).tolist()
-  decoded_text_0 = tokenizer.decode(predicted_0)
-  print(f'decoded output: "{decoded_text_0}"')
-
-  graph = AbsorbingGraph(tokenizer.vocab_size)
-
-  # def loss_dwdse(scorenet, graph, noise, batch, t):
-  model = Sedd(scorenet, graph, noise_schedule)
-  print(loss_dwdse(model, padded_batch, torch.tensor([0.4, 0.7])))
-
-  cf = util.Config(
-    dict(
-      epochs=5,
-      batch_size=2,
-      snapshot_freq=None,
-      eval_freq=1,
-      log_freq=1,
-      sample_freq=1,
-      sample_steps=128,
-      lr=1e-3,
-    )
-  )
-  tr = eval_train.Trainer(model, cf)
-
-  from torch.utils.data import DataLoader, TensorDataset
-
-  ds = TensorDataset(padded_batch)
-  loader = DataLoader(ds, batch_size=cf.batch_size, shuffle=True)
-  tr.train(loader, loader)
-
-  import reverse
-
-  reverse.sample_log(model, steps=4)
+def sample_t(batch_size, eps):
+  device = util.device()
+  # almost t ~ U([0,1]), but remove dangerous 0 and 1 edges
+  return (1 - eps) * torch.rand(batch_size, device=device) + eps
