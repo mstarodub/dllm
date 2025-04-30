@@ -21,6 +21,8 @@ class ScoreNet(nn.Module):
     self.embed_dim = embed_dim
     self.pad_idx = pad_idx
     self.max_seq_len = max_seq_len
+    # +1 for absorbing state
+    vocab_size = vocab_size + 1
 
     self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=self.pad_idx)
     self.pos_encoder = encoding.PositionalEncoding(embed_dim, max_len=max_seq_len)

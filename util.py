@@ -7,6 +7,10 @@ def device():
   return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
+def dl_workers():
+  return 12 if torch.cuda.is_available() else 0
+
+
 def log(log_dict):
   print(*log_dict.items(), sep='\n')
 

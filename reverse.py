@@ -27,7 +27,7 @@ def sample(model, steps, nbatches):
     model.graph.absorbing_state,
     device=device,
   )
-  timesteps = torch.linspace(1.0, model.noise.t_eps(), steps + 1, device=device)
+  timesteps = torch.linspace(1.0, model.noise.eps, steps + 1, device=device)
   sigma_total = model.noise.noise_total(timesteps)
   for idx in range(steps):
     # time flows from 1 to 0 in the reverse process
@@ -50,5 +50,6 @@ def sample(model, steps, nbatches):
 
 
 def sample_log(model, steps, log_extra=dict()):
-  x = sample(model, steps, nbatches=1)
-  util.log({'sample': x}, **log_extra)
+  x = sample(model, steps, nbatches=1).squeeze(dim=0)
+  print('raw sample', x)
+  util.log({'sample': model.tokenizer.decode(x), **log_extra})
