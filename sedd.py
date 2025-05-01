@@ -62,7 +62,7 @@ class Trainer:
       lr_lambda=lambda step: min(step / self.warmup, 1.0) if self.warmup else 1.0,
     )
     self.checkpoint_dir = checkpoint_dir
-    self.num_epochs = config.epochs
+    self.num_steps = config.steps
     self.batch_size = config.batch_size
     self.checkpoint_freq = config.snapshot_freq
     self.eval_freq = config.eval_freq
@@ -73,37 +73,36 @@ class Trainer:
   def train(self):
     self.model.scorenet.train()
     device = util.device()
-    for epoch in trange(self.num_epochs):
-      for b, batch in enumerate(self.data_train):
-        step = epoch * len(self.data_train) + b
-        batch = batch.to(device)
-        t = sample_t(batch.shape[0], self.model.noise.eps)
-        loss = loss_dwdse(self.model, batch, t)
-        self.opt.zero_grad()
-        loss.backward()
-        if self.grad_clip > 0:
-          torch.nn.utils.clip_grad_norm_(
-            self.model.scorenet.parameters(), max_norm=self.grad_clip
-          )
-        self.opt.step()
-        self.scheduler.step()
+    data_iter = iter(self.data_train)
+    for step in trange(self.num_steps):
+      batch = next(data_iter, None)
+      if batch is None:
+        data_iter = iter(self.data_train)
+        batch = next(data_iter)
+      batch = batch.to(device)
 
-        every_n = lambda ref: ref and step % ref == 0
-        if every_n(self.checkpoint_freq) and b > 0 and self.checkpoint_dir:
-          self.model.save(
-            os.path.join(self.checkpoint_dir, f'checkpoint_ep{epoch}_step{b}.pt')
-          )
-        step_stats = {
-          'epoch': epoch,
-          'batch': step,
-        }
-        if every_n(self.eval_freq):
-          self.eval(step_stats)
-          self.model.scorenet.train()
-        if every_n(self.log_freq) and batch.shape[0] == self.batch_size:
-          util.log({'train/loss': loss.item(), **step_stats})
-        if every_n(self.sample_freq):
-          sample_log(self.model, self.sample_steps, step_stats)
+      t = sample_t(batch.shape[0], self.model.noise.eps)
+      loss = loss_dwdse(self.model, batch, t)
+      self.opt.zero_grad()
+      loss.backward()
+      if self.grad_clip > 0:
+        torch.nn.utils.clip_grad_norm_(
+          self.model.scorenet.parameters(), max_norm=self.grad_clip
+        )
+      self.opt.step()
+      self.scheduler.step()
+
+      every_n = lambda ref: ref and step % ref == 0
+      if every_n(self.checkpoint_freq) and step > 0 and self.checkpoint_dir:
+        self.model.save(os.path.join(self.checkpoint_dir, f'checkpoint_step{step}.pt'))
+      step_stats = {'step': step}
+      if every_n(self.eval_freq):
+        self.eval(step_stats)
+        self.model.scorenet.train()
+      if every_n(self.log_freq) and batch.shape[0] == self.batch_size:
+        util.log({'train/loss': loss.item(), **step_stats})
+      if every_n(self.sample_freq):
+        sample_log(self.model, self.sample_steps, step_stats)
 
   @torch.no_grad()
   def eval(self, log_extra=dict()):

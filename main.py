@@ -5,7 +5,7 @@ from sedd import Sedd, Trainer
 
 cf = util.Config(
   dict(
-    epochs=50000,
+    steps=50000,
     batch_size=256,
     snapshot_freq=None,
     # TODO: need a proper test set for both
