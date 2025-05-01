@@ -71,7 +71,7 @@ class Trainer:
       print(f'checkpoint for step {step} not found. retraining')
       return
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    self.model.scorenet.load_state_dict(checkpoint['model'])
+    self.model.scorenet.load_state_dict(checkpoint['scorenet'])
     self.model.scorenet.to(device)
     self.opt.load_state_dict(checkpoint['optimizer'])
     self.scheduler.load_state_dict(checkpoint['scheduler'])
