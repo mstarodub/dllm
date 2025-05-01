@@ -1,4 +1,5 @@
 import torch
+from tqdm import trange
 
 import util
 
@@ -30,7 +31,7 @@ def sample(model, steps, nbatches):
   )
   timesteps = torch.linspace(1.0, model.noise.eps, steps + 1, device=device)
   sigma_total = model.noise.noise_total(timesteps)
-  for idx in range(steps):
+  for idx in trange(steps):
     # time flows from 1 to 0 in the reverse process
     sigma_cur, sigma_next = sigma_total[idx], sigma_total[idx + 1]
     sigma_batch = sigma_cur.expand(nbatches, 1)

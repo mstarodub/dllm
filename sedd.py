@@ -29,18 +29,6 @@ class Sedd:
     self.noise = noise.LogLinearNoise()
     self.tokenizer = tokenizer
 
-  def save(self, path):
-    directory = os.path.dirname(path)
-    if directory:
-      os.makedirs(directory, exist_ok=True)
-    torch.save(self.scorenet.state_dict(), path)
-
-  def load(self, path):
-    device = util.device()
-    if os.path.exists(path):
-      self.scorenet.load_state_dict(torch.load(path, map_location=device))
-      self.scorenet.to(device)
-
 
 class Trainer:
   def __init__(
@@ -50,6 +38,7 @@ class Trainer:
     data_train,
     data_test,
     checkpoint_dir=None,
+    resume_from=None,
   ):
     self.model = model
     self.data_train = data_train
@@ -63,6 +52,7 @@ class Trainer:
       lr_lambda=lambda step: min(step / self.warmup, 1.0) if self.warmup else 1.0,
     )
     self.checkpoint_dir = checkpoint_dir
+    self.start_step = 0
     self.num_steps = config.steps
     self.batch_size = config.batch_size
     self.checkpoint_freq = config.checkpoint_freq
@@ -71,11 +61,44 @@ class Trainer:
     self.sample_freq = config.sample_freq
     self.sample_steps = config.sample_steps
 
+    if resume_from is not None and checkpoint_dir:
+      self.load_checkpoint(resume_from)
+
+  def load_checkpoint(self, step):
+    device = util.device()
+    checkpoint_path = os.path.join(self.checkpoint_dir, f'checkpoint_step{step}.pt')
+    if not os.path.exists(checkpoint_path):
+      print(f'checkpoint for step {step} not found. retraining')
+      return
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    self.model.scorenet.load_state_dict(checkpoint['model'])
+    self.model.scorenet.to(device)
+    self.opt.load_state_dict(checkpoint['optimizer'])
+    self.scheduler.load_state_dict(checkpoint['scheduler'])
+    self.start_step = checkpoint['step'] + 1
+    print(f'resuming training from step {self.start_step}')
+
+  def save_checkpoint(self, step):
+    if not self.checkpoint_dir:
+      return
+    checkpoint_path = os.path.join(self.checkpoint_dir, f'checkpoint_step{step}.pt')
+    directory = os.path.dirname(checkpoint_path)
+    if directory:
+      os.makedirs(directory, exist_ok=True)
+    checkpoint = {
+      'scorenet': self.model.scorenet.state_dict(),
+      'optimizer': self.opt.state_dict(),
+      'scheduler': self.scheduler.state_dict(),
+      'step': step,
+    }
+    torch.save(checkpoint, checkpoint_path)
+    print(f'checkpoint at step {step} saved')
+
   def train(self):
     self.model.scorenet.train()
     device = util.device()
     data_iter = iter(self.data_train)
-    for step in trange(self.num_steps):
+    for step in trange(self.start_step, self.num_steps):
       batch = next(data_iter, None)
       if batch is None:
         data_iter = iter(self.data_train)
@@ -94,8 +117,8 @@ class Trainer:
       self.scheduler.step()
 
       every_n = lambda ref: ref and step % ref == 0
-      if every_n(self.checkpoint_freq) and step > 0 and self.checkpoint_dir:
-        self.model.save(os.path.join(self.checkpoint_dir, f'checkpoint_step{step}.pt'))
+      if every_n(self.checkpoint_freq) and step > 0:
+        self.save_checkpoint(step)
       step_stats = {'step': step}
       if every_n(self.eval_freq):
         self.eval(step_stats)

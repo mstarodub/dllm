@@ -112,6 +112,7 @@ def gpt2_experiment(wandb_log=True):
     data_train=train_loader,
     data_test=test_loader,
     checkpoint_dir='checkpoints/gpt2',
+    resume_from=7000,
   )
 
   wandb_mode = 'online' if wandb_log else 'disabled'
