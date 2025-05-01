@@ -6,7 +6,7 @@ from sedd import Sedd, Trainer
 cf = util.Config(
   dict(
     steps=50000,
-    batch_size=128,
+    batch_size=8,
     snapshot_freq=None,
     # TODO: need a proper test set for both
     eval_freq=None,
@@ -79,12 +79,12 @@ def protein_experiment(add_markers=True):
 
 
 def gpt2_experiment():
-  cf.block_size = 1024
+  cf.block_size = 512
   cf.max_seq_len = cf.block_size
-  cf.embed_dim = 768
+  cf.embed_dim = 256
   cf.time_embed_dim = 128
-  cf.num_heads = 12
-  cf.num_layers = 12
+  cf.num_heads = 4
+  cf.num_layers = 4
 
   gpt_tokenizer = tokenizer.GPTTokenizer()
   model = Sedd(cf, gpt_tokenizer)

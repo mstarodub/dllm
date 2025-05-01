@@ -66,7 +66,7 @@ class CharTokenizer:
 
 class GPTTokenizer:
   def __init__(self):
-    self.tk = GPT2TokenizerFast.from_pretrained('gpt2')
+    self.tk = GPT2TokenizerFast.from_pretrained('erbacher/TinyStories-10k-tokenizer')
     self.tk.add_special_tokens({'pad_token': '[PAD]'})
     self.pad_idx = self.tk.pad_token_id
 
