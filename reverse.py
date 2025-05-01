@@ -45,7 +45,7 @@ def sample(model, steps, nbatches):
     # we can sample from unnormalized; [B*L, V]
     probs_flat = probs.reshape(-1, vocab_absorbing_size)
     # TODO: this still has large negative values
-    sampled = torch.multinomial(probs_flat.clamp(min=1e-10), num_samples=1)
+    sampled = torch.multinomial(probs_flat.clamp(min=1e-10, max=1e10), num_samples=1)
     xt = sampled.reshape(nbatches, model.scorenet.max_seq_len)
 
   return xt

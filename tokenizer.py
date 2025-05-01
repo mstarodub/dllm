@@ -26,7 +26,6 @@ class CharTokenizer:
     self.pad_idx = self.char_to_idx[self.pad_token]
     self.bos_idx = self.char_to_idx.get(self.bos_token)
     self.eos_idx = self.char_to_idx.get(self.eos_token)
-    print(self.idx_to_char.items())
 
   @property
   def vocab_size(self):

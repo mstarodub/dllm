@@ -1,7 +1,6 @@
 import os
 import torch
 import wandb
-# TODO: use wandb config / log with wandb if enabled
 
 
 def device():
@@ -23,11 +22,15 @@ def settings():
 
 
 def log(log_dict):
-  print(*log_dict.items(), sep='\n')
+  if wandb.run is not None:
+    wandb.log(log_dict)
+  else:
+    print(*log_dict.items(), sep='\n')
 
 
 class Config:
   def __init__(self, d):
+    self.cf_dict = d
     if d is not None:
       for key, value in d.items():
         setattr(self, key, value)
