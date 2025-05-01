@@ -56,9 +56,8 @@ def sentences_experiment():
 
 def protein_experiment(add_markers=True):
   cf.max_seq_len = 127
-  bos, eos = ('<s>', '</s>') if add_markers else (None, None)
   protein_tokenizer = tokenizer.CharTokenizer(
-    dataset.protein_alphabet(), bos=bos, eos=eos
+    dataset.protein_alphabet(), add_special_tokens=add_markers
   )
   model = Sedd(cf, protein_tokenizer)
 
@@ -80,5 +79,8 @@ def protein_experiment(add_markers=True):
 
 
 if __name__ == '__main__':
+  # util.grad_debug()
+  util.cudnn_backend()
+
   sentences_experiment()
   # protein_experiment()

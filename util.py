@@ -15,6 +15,11 @@ def grad_debug():
   torch.autograd.set_detect_anomaly(True)
 
 
+def cudnn_backend():
+  if torch.cuda.is_available():
+    torch.backends.cudnn.benchmark = True
+
+
 def log(log_dict):
   print(*log_dict.items(), sep='\n')
 

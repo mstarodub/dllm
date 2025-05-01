@@ -1,8 +1,9 @@
 from typing import List
+from transformers import GPT2TokenizerFast
 
 
 class CharTokenizer:
-  def __init__(self, alphabet, bos=None, eos=None):
+  def __init__(self, alphabet, add_special_tokens):
     self.chars = alphabet
 
     # this is not nice from a theory standpoint. we could fill every input
@@ -10,8 +11,11 @@ class CharTokenizer:
     # the markov process as changeable states. via choosing a good dataset
     # we can still have variable answer sizes (the model may learn to insert spaces)
     self.pad_token = '[PAD]'
-    self.bos_token = bos
-    self.eos_token = eos
+    if add_special_tokens:
+      self.bos_token, self.eos_token = '<s>', '</s>'
+    else:
+      self.bos_token, self.eos_token = None, None
+
     self.vocab = [
       self.pad_token,
       *(t for t in (self.bos_token, self.eos_token) if t is not None),
@@ -25,7 +29,7 @@ class CharTokenizer:
     print(self.idx_to_char.items())
 
   @property
-  def vocab_size(self) -> int:
+  def vocab_size(self):
     return len(self.vocab)
 
   def encode(self, text: str) -> List[int]:
@@ -58,3 +62,20 @@ class CharTokenizer:
       + [t for t in [self.eos_idx] if t is not None]
       for seq in seqs
     ]
+
+
+class GPTTokenizer:
+  def __init__(self):
+    self.tk = GPT2TokenizerFast.from_pretrained('gpt2')
+    self.tk.add_special_tokens({'pad_token': '[PAD]'})
+    self.pad_idx = self.tk.pad_token_id
+
+  @property
+  def vocab_size(self):
+    return len(self.tk)
+
+  def encode_all(self, seqs: List[str]) -> List[List[int]]:
+    return self.tk(seqs, add_special_tokens=False)['input_ids']
+
+  def decode(self, indices: List[int], skip_special_tokens=True) -> str:
+    return self.tk.decode(indices, skip_special_tokens=skip_special_tokens)
