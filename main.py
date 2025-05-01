@@ -11,7 +11,7 @@ def get_conf():
     dict(
       steps=50000,
       batch_size=8,
-      snapshot_freq=None,
+      checkpoint_freq=None,
       # TODO: need a proper test set for both
       eval_freq=None,
       log_freq=1000,
@@ -94,6 +94,8 @@ def gpt2_experiment(wandb_log=True):
   cf.num_layers = 4
   cf.log_freq = 50
   cf.batch_size = 64
+  cf.checkpoint_freq = cf.sample_freq
+  cf.sample_steps = 1024
 
   gpt_tokenizer = tokenizer.GPTTokenizer()
   model = Sedd(cf, gpt_tokenizer)

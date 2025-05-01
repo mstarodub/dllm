@@ -65,7 +65,7 @@ class Trainer:
     self.checkpoint_dir = checkpoint_dir
     self.num_steps = config.steps
     self.batch_size = config.batch_size
-    self.checkpoint_freq = config.snapshot_freq
+    self.checkpoint_freq = config.checkpoint_freq
     self.eval_freq = config.eval_freq
     self.log_freq = config.log_freq
     self.sample_freq = config.sample_freq
