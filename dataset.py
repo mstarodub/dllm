@@ -1,8 +1,10 @@
 import string
 from itertools import chain
 from Bio import SeqIO
+from datasets import load_dataset
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, IterableDataset
+from itertools import islice
 
 import util
 
@@ -27,7 +29,7 @@ def mk_collate(pad_idx, max_seq_len):
 
   def collate(batch):
     if max_seq_len is None:
-      return [torch.tensor(seq, device=device) for seq in batch]
+      return torch.tensor(batch, device=device)
     out = []
     for seq in batch:
       if len(seq) > max_seq_len:
@@ -86,3 +88,53 @@ def text_dataset(
     num_workers=util.dl_workers(),
     collate_fn=collate_fn,
   )
+
+
+def gpt2_dataset(
+  tokenizer,
+  batch_size,
+  block_size,
+):
+  device = util.device()
+
+  dataset_dir = 'data/tinystories'
+  train_ds = load_dataset(
+    'roneneldan/TinyStories',
+    split='train',
+    streaming=True,
+    cache_dir=dataset_dir,
+  )
+  test_ds = load_dataset(
+    'roneneldan/TinyStories',
+    split='validation',
+    streaming=True,
+    cache_dir=dataset_dir,
+  )
+
+  class StreamingDataset(IterableDataset):
+    def __init__(self, raw_dataset, tokenizer, block_size):
+      self.raw_dataset = raw_dataset
+      self.tokenizer = tokenizer
+      self.block_size = block_size
+
+    def __iter__(self):
+      buffer = []
+      for example in self.raw_dataset:
+        tokens = self.tokenizer.encode_all([example['text']])[0]
+        buffer.extend(tokens)
+        while len(buffer) >= self.block_size:
+          chunk = buffer[: self.block_size]
+          buffer = buffer[self.block_size :]
+          yield torch.tensor(chunk, device=device)
+
+  train_loader = DataLoader(
+    StreamingDataset(train_ds, tokenizer, block_size),
+    batch_size=batch_size,
+  )
+
+  test_loader = DataLoader(
+    StreamingDataset(test_ds, tokenizer, block_size),
+    batch_size=batch_size,
+  )
+
+  return train_loader, test_loader

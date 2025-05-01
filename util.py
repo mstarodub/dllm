@@ -1,3 +1,4 @@
+import os
 import torch
 import wandb
 # TODO: use wandb config / log with wandb if enabled
@@ -15,7 +16,8 @@ def grad_debug():
   torch.autograd.set_detect_anomaly(True)
 
 
-def cudnn_backend():
+def settings():
+  os.environ['TOKENIZERS_PARALLELISM'] = 'false'
   if torch.cuda.is_available():
     torch.backends.cudnn.benchmark = True
 

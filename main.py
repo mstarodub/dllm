@@ -6,14 +6,14 @@ from sedd import Sedd, Trainer
 cf = util.Config(
   dict(
     steps=50000,
-    batch_size=256,
+    batch_size=128,
     snapshot_freq=None,
     # TODO: need a proper test set for both
     eval_freq=None,
     log_freq=1000,
     sample_freq=1000,
     # 1024 for proteins, 128 for language
-    sample_steps=10,
+    sample_steps=128,
     lr=3e-4,
     warmup=2500,
     grad_clip=1.0,
@@ -78,9 +78,37 @@ def protein_experiment(add_markers=True):
   trainer.train()
 
 
+def gpt2_experiment():
+  cf.block_size = 1024
+  cf.max_seq_len = cf.block_size
+  cf.embed_dim = 768
+  cf.time_embed_dim = 128
+  cf.num_heads = 12
+  cf.num_layers = 12
+
+  gpt_tokenizer = tokenizer.GPTTokenizer()
+  model = Sedd(cf, gpt_tokenizer)
+
+  train_loader, test_loader = dataset.gpt2_dataset(
+    gpt_tokenizer,
+    batch_size=cf.batch_size,
+    block_size=cf.block_size,
+  )
+
+  trainer = Trainer(
+    model,
+    cf,
+    data_train=train_loader,
+    data_test=test_loader,
+    checkpoint_dir='checkpoints/gpt2',
+  )
+  trainer.train()
+
+
 if __name__ == '__main__':
   # util.grad_debug()
-  util.cudnn_backend()
+  util.settings()
 
-  sentences_experiment()
+  # sentences_experiment()
   # protein_experiment()
+  gpt2_experiment()

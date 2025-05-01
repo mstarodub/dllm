@@ -24,6 +24,7 @@ class Sedd:
       pad_idx=tokenizer.pad_idx,
       dropout=config.dropout_p,
     ).to(device)
+    self.scorenet = torch.compile(self.scorenet)
     self.graph = graph.AbsorbingGraph(tokenizer.vocab_size)
     self.noise = noise.LogLinearNoise()
     self.tokenizer = tokenizer
