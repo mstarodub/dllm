@@ -63,7 +63,10 @@ def protein_experiment(add_markers=True, wandb_log=True):
   cf.time_embed_dim = 128
   cf.num_heads = 8
   cf.num_layers = 8
-  cf.batch_size = 512
+  cf.log_freq = 10
+  cf.sample_freq = 100
+  cf.checkpoint_freq = cf.sample_freq
+  cf.batch_size = 256
   protein_tokenizer = tokenizer.CharTokenizer(
     dataset.protein_alphabet(), add_special_tokens=add_markers
   )
