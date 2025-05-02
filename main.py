@@ -22,6 +22,7 @@ def get_conf():
       grad_clip=1.0,
       dropout_p=0.1,
       max_seq_len=None,
+      block_size=None,
       embed_dim=8,
       time_embed_dim=8,
       num_heads=2,
@@ -31,15 +32,18 @@ def get_conf():
   )
 
 
-def sentences_experiment():
+def sentences_experiment(wandb_log=False):
   cf = get_conf()
+  cf.checkpoint_freq = 2 * cf.log_freq
   cf.max_seq_len = 11
-  text_tokenizer = tokenizer.CharTokenizer(dataset.ascii_alphabet())
+  text_tokenizer = tokenizer.CharTokenizer(
+    dataset.ascii_alphabet(), add_special_tokens=False
+  )
   model = Sedd(cf, text_tokenizer)
 
   texts = [
-    # 'abcdefghijk',
-    'aaaaaaaaaaa',
+    'abcdefghijk',
+    # 'aaaaaaaaaaa',
     # 'a',
   ]
 
@@ -50,8 +54,18 @@ def sentences_experiment():
     max_seq_len=cf.max_seq_len,
     block_size=cf.block_size,
   )
-  trainer = Trainer(model, cf, data_train=loader, data_test=loader)
-  trainer.train()
+  trainer = Trainer(
+    model,
+    cf,
+    data_train=loader,
+    data_test=loader,
+    # checkpoint_dir='checkpoints/test',
+    # resume_from=6000,
+    # resume_from_run='4iv551pa',
+  )
+  wandb_mode = 'online' if wandb_log else 'disabled'
+  with wandb.init(project='lldm', config=cf.cf_dict, mode=wandb_mode):
+    trainer.train()
 
 
 def protein_experiment(add_markers=True, wandb_log=True):
@@ -85,6 +99,8 @@ def protein_experiment(add_markers=True, wandb_log=True):
     data_train=loader,
     data_test=loader,
     checkpoint_dir='checkpoints/proteins',
+    resume_from=None,
+    resume_from_run=None,
   )
   wandb_mode = 'online' if wandb_log else 'disabled'
   with wandb.init(project='lldm', config=cf.cf_dict, mode=wandb_mode):
@@ -120,7 +136,8 @@ def gpt2_experiment(wandb_log=True):
     data_train=train_loader,
     data_test=test_loader,
     checkpoint_dir='checkpoints/gpt2',
-    resume_from=7000,
+    resume_from=None,
+    resume_from_run=None,
   )
 
   wandb_mode = 'online' if wandb_log else 'disabled'
@@ -132,6 +149,6 @@ if __name__ == '__main__':
   # util.grad_debug()
   util.settings()
 
-  # sentences_experiment()
-  protein_experiment()
-  # gpt2_experiment()
+  # sentences_experiment(wandb_log=False)
+  # protein_experiment()
+  gpt2_experiment()

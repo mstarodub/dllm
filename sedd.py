@@ -1,7 +1,7 @@
 import os
 import torch
 import numpy as np
-from tqdm import tqdm, trange
+from tqdm.auto import tqdm, trange
 
 import util
 import score
@@ -39,6 +39,7 @@ class Trainer:
     data_test,
     checkpoint_dir=None,
     resume_from=None,
+    resume_from_run=None,
   ):
     self.model = model
     self.data_train = data_train
@@ -62,10 +63,14 @@ class Trainer:
     self.sample_steps = config.sample_steps
 
     if resume_from is not None and checkpoint_dir:
-      self.load_checkpoint(resume_from)
+      self.load_checkpoint(resume_from, resume_from_run)
 
-  def load_checkpoint(self, step):
+  def load_checkpoint(self, step, resume_from_run):
     device = util.device()
+    if resume_from_run:
+      checkpoint_path = util.wandb_download_checkpoint(
+        resume_from_run, step, self.checkpoint_dir
+      )
     checkpoint_path = os.path.join(self.checkpoint_dir, f'checkpoint_step{step}.pt')
     if not os.path.exists(checkpoint_path):
       print(f'checkpoint for step {step} not found. retraining')
@@ -91,7 +96,7 @@ class Trainer:
       'scheduler': self.scheduler.state_dict(),
       'step': step,
     }
-    torch.save(checkpoint, checkpoint_path)
+    util.save(checkpoint, step, checkpoint_path)
     print(f'checkpoint at step {step} saved')
 
   def train(self):

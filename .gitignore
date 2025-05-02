@@ -3,6 +3,7 @@ slurm-*.out
 __marimo__/
 wandb/
 data/
+checkpoints/
 # Python-generated files
 __pycache__/
 *.py[oc]
