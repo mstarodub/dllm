@@ -4,7 +4,6 @@ from Bio import SeqIO
 from datasets import load_dataset
 import torch
 from torch.utils.data import DataLoader, IterableDataset
-from itertools import islice
 
 import util
 
@@ -67,7 +66,7 @@ def acyp_dataset(
     tokenized,
     batch_size=batch_size,
     shuffle=True,
-    num_workers=util.dl_workers(),
+    # num_workers=util.dl_workers(),
     collate_fn=collate_fn,
   )
 
@@ -85,7 +84,7 @@ def text_dataset(
     encoded,
     batch_size=batch_size,
     shuffle=True,
-    num_workers=util.dl_workers(),
+    # num_workers=util.dl_workers(),
     collate_fn=collate_fn,
   )
 
