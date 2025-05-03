@@ -17,7 +17,6 @@ def expm_absorbing(a, v):
   return expm
 
 
-# TODO: unfortunately this is way too slow
 # \tau-leaping tweedie denoising
 @torch.no_grad()
 def sample(model, steps, nbatches):
