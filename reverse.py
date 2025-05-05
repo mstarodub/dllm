@@ -38,12 +38,10 @@ def sample(model, steps, nbatches):
     expm_fwd = expm_absorbing(sigma_next - sigma_cur, vocab_absorbing_size)
     expm_rev = expm_absorbing(sigma_cur - sigma_next, vocab_absorbing_size)
 
-    # TODO: unsure (logprob)
     scores = model.scorenet(xt, sigma_batch).exp()
 
     probs = torch.einsum('ij,blj->bli', expm_fwd, scores) * expm_rev[xt]
     # we can sample from unnormalized; [B*L, V]
-    # TODO: this still has weird values
     probs_flat = torch.nan_to_num(
       probs.reshape(-1, vocab_absorbing_size).clamp(min=1e-10, max=1e10), nan=0.0
     )

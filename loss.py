@@ -1,8 +1,10 @@
 import torch
 
 
-# integral via single MC sample of t
-def loss_dwdse_branchless(model, x0, t):
+def loss_dwdse(model, x0):
+  batch_size = x0.shape[0]
+  # integral via single MC sample of t
+  t = sample_t(batch_size, model.noise.eps, device=x0.device)
   sigma, dsigma = model.noise(t)
   xt = model.graph.sample_transition(x0, sigma)
   # M is number of absorbed tokens
@@ -22,5 +24,9 @@ def loss_dwdse_branchless(model, x0, t):
   normalizing = ratio * (ratio.log() - 1)
   # [M]
   entropy = pos - neg + normalizing
-  # mean over B
-  return (dsigma * entropy).sum() / x0.shape[0]
+  return (dsigma * entropy).sum() / batch_size
+
+
+def sample_t(batch_size, eps, device):
+  # almost t ~ U([0,1]), but remove dangerous 0 and 1 edges
+  return (1 - eps) * torch.rand(batch_size, device=device) + eps

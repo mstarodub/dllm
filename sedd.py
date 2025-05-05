@@ -110,8 +110,7 @@ class Trainer:
         batch = next(data_iter)
       batch = batch.to(device)
 
-      t = sample_t(batch.shape[0], self.model.noise.eps)
-      loss = loss_dwdse(self.model, batch, t)
+      loss = loss_dwdse(self.model, batch)
       self.opt.zero_grad()
       loss.backward()
       if self.grad_clip > 0:
@@ -140,13 +139,6 @@ class Trainer:
     losses = []
     for batch in tqdm(self.data_test):
       batch = batch.to(device)
-      t = sample_t(batch.shape[0], self.model.noise.eps)
-      loss = loss_dwdse(self.model, batch, t)
+      loss = loss_dwdse(self.model, batch)
       losses.append(loss.item())
     util.log({'test/loss': np.mean(losses), **log_extra})
-
-
-def sample_t(batch_size, eps):
-  device = util.device()
-  # almost t ~ U([0,1]), but remove dangerous 0 and 1 edges
-  return (1 - eps) * torch.rand(batch_size, device=device) + eps
