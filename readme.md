@@ -108,6 +108,9 @@ We apply the model to the ACYP protein dataset - credit for this idea goes to [A
 
 Training was done for 30k steps on a single A100 GPU. Sampling used 1024 denoising steps. Folding of sampled sequences was performed using ESMFold to evaluate plausibility. Folding success was low (14 out of 300), but all successful structures were syntactically correct, suggesting the model learns the correct structural priors even without explicit folding success as part of the objective.
 
-![example protein](/figures/proteins/27500.png)
+An example of a generated protein:
+<p align="center">
+<img src="https://raw.githubusercontent.com/mstarodub/dllm/refs/heads/master/figures/proteins/27400.png" width="360" height="266" >
+</p>
 
 We also attempted to apply the model to the TinyStories dataset. This is currently broken for some reason (patches are welcome).
